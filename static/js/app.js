@@ -1,5 +1,6 @@
 /**
- * QuoteHub - Modern Vanilla JavaScript Application
+ * QuoteHub - Modern Client Application
+ * Supports both GitHub Pages static hosting and Flask server mode
  */
 
 (function () {
@@ -7,13 +8,13 @@
 
     // State
     const state = {
+        allQuotes: [],
         currentHeroQuote: null,
         searchQuery: '',
         selectedCategory: '',
         selectedAuthor: '',
         categories: [],
-        authors: [],
-        totalQuotesCount: 0
+        authors: []
     };
 
     // DOM Elements
@@ -94,59 +95,71 @@
         document.body.removeChild(textarea);
     }
 
-    // API Calls
-    async function fetchRandomQuote() {
+    // Data Management
+    async function loadDataset() {
         try {
-            let url = '/api/quote/random';
-            if (state.selectedCategory) {
-                url += `?category=${encodeURIComponent(state.selectedCategory)}`;
+            // First try loading quotes.json directly (works seamlessly on GitHub Pages and local servers)
+            const res = await fetch('./data/quotes.json');
+            if (res.ok) {
+                return await res.json();
             }
-            const res = await fetch(url);
-            if (!res.ok) {
-                // Fallback to totally random if filter yields none
-                const fallbackRes = await fetch('/api/quote/random');
-                return await fallbackRes.json();
-            }
-            return await res.json();
         } catch (err) {
-            console.error('Error fetching random quote:', err);
-            return null;
+            console.warn('Direct static fetch failed, trying API fallback...', err);
         }
-    }
 
-    async function fetchCategories() {
+        // Fallback to Flask API route
         try {
-            const res = await fetch('/api/categories');
-            return await res.json();
+            const apiRes = await fetch('/api/quotes');
+            const data = await apiRes.json();
+            return data.quotes || [];
         } catch (err) {
-            console.error('Error fetching categories:', err);
+            console.error('Failed to load quotes data', err);
             return [];
         }
     }
 
-    async function fetchAuthors() {
-        try {
-            const res = await fetch('/api/authors');
-            return await res.json();
-        } catch (err) {
-            console.error('Error fetching authors:', err);
-            return [];
-        }
+    function processMetadata(quotes) {
+        const catMap = {};
+        const authMap = {};
+
+        quotes.forEach(q => {
+            const cat = q.category || 'General';
+            const auth = q.author || 'Unknown';
+            catMap[cat] = (catMap[cat] || 0) + 1;
+            authMap[auth] = (authMap[auth] || 0) + 1;
+        });
+
+        const categories = Object.keys(catMap).sort().map(k => ({ name: k, count: catMap[k] }));
+        const authors = Object.keys(authMap).sort().map(k => ({ name: k, count: authMap[k] }));
+
+        return { categories, authors };
     }
 
-    async function fetchQuotes() {
-        try {
-            const params = new URLSearchParams();
-            if (state.searchQuery) params.append('q', state.searchQuery);
-            if (state.selectedCategory) params.append('category', state.selectedCategory);
-            if (state.selectedAuthor) params.append('author', state.selectedAuthor);
-
-            const res = await fetch(`/api/quotes?${params.toString()}`);
-            return await res.json();
-        } catch (err) {
-            console.error('Error fetching quotes:', err);
-            return { total: 0, quotes: [] };
+    function getRandomQuote(category = null) {
+        let pool = state.allQuotes;
+        if (category) {
+            const filtered = pool.filter(q => q.category.toLowerCase() === category.toLowerCase());
+            if (filtered.length > 0) pool = filtered;
         }
+        if (pool.length === 0) return null;
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function filterQuotes() {
+        const q = state.searchQuery.toLowerCase();
+        const cat = state.selectedCategory.toLowerCase();
+        const auth = state.selectedAuthor.toLowerCase();
+
+        return state.allQuotes.filter(item => {
+            if (cat && (item.category || '').toLowerCase() !== cat) return false;
+            if (auth && (item.author || '').toLowerCase() !== auth) return false;
+            if (q) {
+                const inQuote = (item.quote || '').toLowerCase().includes(q);
+                const inAuthor = (item.author || '').toLowerCase().includes(q);
+                if (!inQuote && !inAuthor) return false;
+            }
+            return true;
+        });
     }
 
     // Render Functions
@@ -154,7 +167,6 @@
         if (!quote) return;
         state.currentHeroQuote = quote;
 
-        // Fade out
         elements.heroQuote.style.opacity = '0';
         elements.heroAuthor.style.opacity = '0';
 
@@ -210,18 +222,18 @@
         });
     }
 
-    function renderQuotesList(quotesData) {
-        elements.resultsCount.textContent = quotesData.total;
+    function renderQuotesList(filteredQuotes) {
+        elements.resultsCount.textContent = filteredQuotes.length;
         elements.quotesGrid.innerHTML = '';
 
-        if (!quotesData.quotes || quotesData.quotes.length === 0) {
+        if (!filteredQuotes || filteredQuotes.length === 0) {
             elements.emptyState.classList.remove('hidden');
             elements.quotesGrid.style.display = 'none';
         } else {
             elements.emptyState.classList.add('hidden');
             elements.quotesGrid.style.display = 'grid';
 
-            quotesData.quotes.forEach(item => {
+            filteredQuotes.forEach(item => {
                 const card = createQuoteCard(item);
                 elements.quotesGrid.appendChild(card);
             });
@@ -309,27 +321,17 @@
         state.selectedCategory = category;
         elements.selectCategory.value = category;
 
-        // Update pills active state
         document.querySelectorAll('#category-pills .pill').forEach(pill => {
-            if (pill.dataset.category === category) {
-                pill.classList.add('active');
-            } else {
-                pill.classList.remove('active');
-            }
+            pill.classList.toggle('active', pill.dataset.category === category);
         });
 
-        refreshQuotes();
+        renderQuotesList(filterQuotes());
     }
 
     function setAuthor(author) {
         state.selectedAuthor = author;
         elements.selectAuthor.value = author;
-        refreshQuotes();
-    }
-
-    async function refreshQuotes() {
-        const data = await fetchQuotes();
-        renderQuotesList(data);
+        renderQuotesList(filterQuotes());
     }
 
     function resetFilters() {
@@ -346,15 +348,15 @@
             pill.classList.toggle('active', pill.dataset.category === '');
         });
 
-        refreshQuotes();
+        renderQuotesList(filterQuotes());
     }
 
     // Event Listeners
     function setupEventListeners() {
-        // Random Quote Hero Button
-        elements.btnNextQuote.addEventListener('click', async () => {
+        // Next Random Quote
+        elements.btnNextQuote.addEventListener('click', () => {
             elements.btnNextQuote.disabled = true;
-            const quote = await fetchRandomQuote();
+            const quote = getRandomQuote(state.selectedCategory);
             renderHeroQuote(quote);
             setTimeout(() => { elements.btnNextQuote.disabled = false; }, 200);
         });
@@ -374,8 +376,8 @@
         const onSearchInput = debounce((e) => {
             state.searchQuery = e.target.value.trim();
             elements.btnClearSearch.style.display = state.searchQuery ? 'block' : 'none';
-            refreshQuotes();
-        }, 200);
+            renderQuotesList(filterQuotes());
+        }, 150);
 
         elements.searchInput.addEventListener('input', onSearchInput);
 
@@ -384,7 +386,7 @@
             elements.searchInput.value = '';
             state.searchQuery = '';
             elements.btnClearSearch.style.display = 'none';
-            refreshQuotes();
+            renderQuotesList(filterQuotes());
         });
 
         // Category Dropdown
@@ -406,30 +408,28 @@
     async function init() {
         setupEventListeners();
 
-        // 1. Fetch categories and authors in parallel
-        const [categories, authors, initialQuotes, heroQuote] = await Promise.all([
-            fetchCategories(),
-            fetchAuthors(),
-            fetchQuotes(),
-            fetchRandomQuote()
-        ]);
+        // Load 100 quotes
+        const quotes = await loadDataset();
+        state.allQuotes = quotes;
 
+        const { categories, authors } = processMetadata(quotes);
         state.categories = categories;
         state.authors = authors;
-        state.totalQuotesCount = initialQuotes.total;
 
-        // Render stats in header
-        if (elements.totalQuotesStat) elements.totalQuotesStat.textContent = initialQuotes.total;
+        // Render header stats
+        if (elements.totalQuotesStat) elements.totalQuotesStat.textContent = quotes.length;
         if (elements.totalCategoriesStat) elements.totalCategoriesStat.textContent = categories.length;
 
-        // Render components
+        // Render controls and initial view
         renderCategoryPills(categories);
         renderCategorySelect(categories);
         renderAuthorSelect(authors);
-        renderQuotesList(initialQuotes);
-        renderHeroQuote(heroQuote);
+        renderQuotesList(quotes);
+
+        // Render initial hero random quote
+        const initialHero = getRandomQuote();
+        renderHeroQuote(initialHero);
     }
 
-    // Boot
     document.addEventListener('DOMContentLoaded', init);
 })();

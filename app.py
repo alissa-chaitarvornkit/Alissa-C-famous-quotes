@@ -1,7 +1,7 @@
 import json
 import os
 import random
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 
 app = Flask(__name__)
 
@@ -21,8 +21,16 @@ QUOTES = load_quotes()
 
 @app.route("/")
 def index():
-    """Render main SPA template."""
+    """Render main SPA (serves root index.html if present, otherwise templates/index.html)."""
+    root_index = os.path.join(BASE_DIR, "index.html")
+    if os.path.exists(root_index):
+        return send_from_directory(BASE_DIR, "index.html")
     return render_template("index.html")
+
+@app.route("/data/<path:path>")
+def send_data(path):
+    """Serve data files directly for static client compatibility."""
+    return send_from_directory(os.path.join(BASE_DIR, "data"), path)
 
 @app.route("/api/quote/random", methods=["GET"])
 def get_random_quote():

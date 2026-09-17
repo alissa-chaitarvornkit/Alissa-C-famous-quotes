@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuoteHub - 100 Famous Quotes</title>
+    <link rel="stylesheet" href="./static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <span class="logo-icon">✨</span>
+                <div>
+                    <h1>QuoteHub</h1>
+                    <p class="tagline">Explore 100 timeless quotes across history, science, and thought</p>
+                </div>
+            </div>
+            <div class="header-stats" id="header-stats">
+                <span class="stat-badge"><strong id="total-quotes-stat">100</strong> Curated Quotes</span>
+                <span class="stat-badge"><strong id="total-categories-stat">8</strong> Categories</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- Hero Spotlight Section -->
+        <section class="spotlight-section" aria-label="Random Quote Spotlight">
+            <div class="spotlight-card" id="spotlight-card">
+                <div class="spotlight-deco">“</div>
+                <div class="spotlight-content">
+                    <div class="spotlight-header">
+                        <span class="badge category-badge" id="hero-category">Technology</span>
+                        <span class="spotlight-label">Quote of the Moment</span>
+                    </div>
+                    <blockquote class="spotlight-quote" id="hero-quote">
+                        Loading an inspiring quote...
+                    </blockquote>
+                    <cite class="spotlight-author" id="hero-author">— Alan Turing</cite>
+                </div>
+                <div class="spotlight-actions">
+                    <button class="btn btn-primary" id="btn-next-quote" title="Get another random quote">
+                        <span class="btn-icon">🎲</span> Next Random Quote
+                    </button>
+                    <button class="btn btn-secondary" id="btn-copy-hero" title="Copy quote to clipboard">
+                        <span class="btn-icon" id="copy-icon">📋</span> <span id="copy-text">Copy Quote</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Search & Filter Controls -->
+        <section class="controls-section" aria-label="Search and Filter">
+            <div class="search-bar-wrapper">
+                <div class="search-input-group">
+                    <span class="search-icon">🔍</span>
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="Search by author (e.g. Einstein, Turing) or quote keyword..." 
+                        autocomplete="off"
+                    />
+                    <button class="btn-clear" id="btn-clear-search" title="Clear search" aria-label="Clear search">✕</button>
+                </div>
+            </div>
+
+            <!-- Category Pills -->
+            <div class="category-pills-container">
+                <span class="filter-label">Categories:</span>
+                <div class="category-pills" id="category-pills">
+                    <button class="pill active" data-category="">All</button>
+                </div>
+            </div>
+
+            <!-- Dropdown Filters Row -->
+            <div class="filter-dropdowns-row">
+                <div class="filter-group">
+                    <label for="select-author">Filter by Author:</label>
+                    <select id="select-author">
+                        <option value="">All Authors</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="select-category">Filter by Category:</label>
+                    <select id="select-category">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div class="filter-group reset-group">
+                    <button class="btn btn-outline" id="btn-reset-filters">
+                        <span>↺</span> Reset Filters
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Counter -->
+        <section class="results-header">
+            <div class="results-count-info">
+                <h2>Browse Quotes</h2>
+                <span class="count-pill">Showing <strong id="results-count">0</strong> quotes</span>
+            </div>
+            <div class="active-filter-indicator" id="active-filter-indicator"></div>
+        </section>
+
+        <!-- Quotes Grid -->
+        <section class="quotes-grid" id="quotes-grid" aria-live="polite">
+            <!-- Cards rendered dynamically via JavaScript -->
+        </section>
+
+        <!-- Empty State -->
+        <div class="empty-state hidden" id="empty-state">
+            <div class="empty-state-icon">🔎</div>
+            <h3>No quotes found</h3>
+            <p>We couldn't find any quotes matching your current search and filter criteria.</p>
+            <button class="btn btn-primary" id="btn-empty-reset">Reset All Filters</button>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast" role="alert" aria-live="assertive">
+        Quote copied to clipboard!
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <p>Built with <strong>Python Flask</strong> &amp; <strong>Vanilla JavaScript</strong> • 100 Timeless Quotes</p>
+    </footer>
+
+    <!-- App JavaScript -->
+    <script src="./static/js/app.js"></script>
+</body>
+</html>
